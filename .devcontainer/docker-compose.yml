@@ -1,0 +1,12 @@
+services:
+  dev:
+    build: .
+    volumes:
+      - ../..:/code:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.ssh:/home/vscode/.ssh
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    privileged: true
+    network_mode: host
+    command: sh -c "sudo chmod 666 /var/run/docker.sock && sleep infinity"
