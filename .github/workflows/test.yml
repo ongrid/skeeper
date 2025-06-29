@@ -23,6 +23,11 @@ jobs:
       - name: Show Forge version
         run: |
           forge --version
+      
+      - name: Run Forge Soldeer install
+        run: |
+          forge soldeer install
+        id: soldeer
 
       - name: Run Forge fmt
         run: |
