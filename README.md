@@ -2,6 +2,8 @@
 
 **Token custodian with role-based access and [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271) signature validator**
 
+[![Code Quality Checks](https://github.com/ongrid/skeeper/actions/workflows/test.yml/badge.svg)](https://github.com/ongrid/skeeper/actions/workflows/test.yml)
+
 ## Overview
 
 `skeeper` is a Solidity smart contract and Python toolkit for secure DeFi operations that require signature verification and token custody logic.
