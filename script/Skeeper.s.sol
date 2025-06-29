@@ -6,13 +6,14 @@ import {SKeeper} from "../src/SKeeper.sol";
 
 contract DeploySkeeper is Script {
     SKeeper public skeeper;
+    address admin = address(123);
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
 
-        skeeper = new SKeeper();
+        skeeper = new SKeeper(admin);
 
         vm.stopBroadcast();
     }
