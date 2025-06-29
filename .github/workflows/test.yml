@@ -1,12 +1,17 @@
-name: CI
+name: Code Quality Checks
 
 on:
   push:
+    branches:
+      - '*'
   pull_request:
-  workflow_dispatch:
+    branches: 
+      - '*'
 
 env:
   FOUNDRY_PROFILE: ci
+  TERM: xterm-256color # Enable colored output
+  FORCE_COLOR: 1 # Force colors in CI
 
 jobs:
   check:
