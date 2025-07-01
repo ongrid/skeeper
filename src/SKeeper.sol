@@ -6,18 +6,42 @@ import {AccessControl} from "@openzeppelin-contracts/access/AccessControl.sol";
 import {IERC1271} from "@openzeppelin-contracts/interfaces/IERC1271.sol";
 import {ECDSA} from "@openzeppelin-contracts/utils/cryptography/ECDSA.sol";
 
+/**
+ * @title Signer & Keeper multi-role wallet
+ * @notice A multi-role wallet contract for managing assets with role-based access control
+ * @dev This contract implements OpenZeppelin's AccessControl for role management and ERC-1271 for signature validation.
+ * It provides functionality for:
+ * - Role-based asset management (ETH and ERC-20 tokens)
+ * - Token approvals for third-party spending
+ * - Signature validation for off-chain signed messages
+ *
+ * Roles:
+ * - DEFAULT_ADMIN_ROLE: Can grant/revoke all roles
+ * - KEEPER_ROLE: Can withdraw funds and approve token spending
+ * - SIGNER_ROLE: Can create valid signatures for ERC-1271 validation
+ *
+ * @author Kirill Varlamov
+ */
 contract SKeeper is AccessControl, IERC1271 {
     using SafeERC20 for IERC20;
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 public constant SIGNER_ROLE = keccak256("SIGNER_ROLE");
 
+    /**
+     * @notice Constructor to initialize the SKeeper contract with admin and signer roles
+     * @param _admin The address of the admin who will have DEFAULT_ADMIN_ROLE and KEEPER_ROLE.
+     * @param _signer The address of the signer who will have SIGNER_ROLE only
+     */
     constructor(address _admin, address _signer) {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(KEEPER_ROLE, _admin);
         _grantRole(SIGNER_ROLE, _signer);
     }
 
+    /**
+     * @notice Fallback function to receive native tokens (ETH)
+     */
     receive() external payable {}
 
     /**
