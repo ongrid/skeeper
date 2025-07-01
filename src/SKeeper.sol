@@ -17,6 +17,17 @@ contract SKeeper is AccessControl {
     receive() external payable {}
 
     /**
+     * @notice Approves a specified amount of a given token from SKeeper's balance to spender
+     * @param token The ERC20 token to approve.
+     * @param amount The amount of the token to approve.
+     * @param spender The address to which the approval is granted.
+     */
+    function approve(address token, address spender, uint256 amount) external onlyRole(KEEPER_ROLE) {
+        require(token != address(0), "Skeeper: ZERO_TOKEN_ADDRESS");
+        IERC20(token).forceApprove(spender, amount);
+    }
+
+    /**
      * @notice Withdraws a specified amount of a given token from SKeeper's balance
      * @param token The ERC20 token to withdraw. If the address is zero, withdraws native token (ETH).
      * @param amount The amount of the token to withdraw.

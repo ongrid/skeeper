@@ -22,6 +22,16 @@ contract SkeeperTest is Test {
         deal(address(skeeper), amount);
     }
 
+    function test_ApproveReverts_WhenNoKeeperRole() public {
+        address stranger_eoa = makeAddr("stranger_eoa");
+        vm.startPrank(stranger_eoa);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger_eoa, KEEPER_ROLE)
+        );
+        skeeper.approve(address(token), address(1), 1);
+    }
+
     function test_WithdrawReverts_WhenNoKeeperRole() public {
         address stranger_eoa = makeAddr("stranger_eoa");
         vm.startPrank(stranger_eoa);
@@ -104,5 +114,21 @@ contract SkeeperTest is Test {
         vm.prank(keeper_eoa);
         skeeper.withdraw(address(0), amount);
         assertEq(keeper_eoa.balance, amount);
+    }
+
+    function test_Erc20_ApprovedSpendSuccess() public {
+        address spender_eoa = makeAddr("spender_eoa");
+        vm.startPrank(keeper_eoa);
+        assertEq(token.allowance(address(skeeper), spender_eoa), 0);
+        skeeper.approve(address(token), spender_eoa, amount);
+
+        // Verify that the spender has been approved
+        assertEq(token.allowance(address(skeeper), spender_eoa), amount);
+
+        // Now spender_eoa can transfer tokens from skeeper to itself
+        vm.startPrank(spender_eoa);
+        token.transferFrom(address(skeeper), spender_eoa, amount);
+        assertEq(token.balanceOf(spender_eoa), amount);
+        assertEq(token.balanceOf(address(skeeper)), 0);
     }
 }
