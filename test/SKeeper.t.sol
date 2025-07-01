@@ -12,7 +12,7 @@ contract SkeeperTest is Test {
     SKeeper public skeeper;
     MockToken public token;
     uint256 amount = 1 ether;
-    address keeper_eoa;
+    address keeperEoa;
     bytes32 KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 SIGNER_ROLE = keccak256("SIGNER_ROLE");
 
@@ -28,8 +28,8 @@ contract SkeeperTest is Test {
 
     function setUp() public {
         token = new MockToken(1 ether, 18);
-        keeper_eoa = makeAddr("keeper_eoa");
-        skeeper = new SKeeper(keeper_eoa, signerEoa);
+        keeperEoa = makeAddr("keeperEoa");
+        skeeper = new SKeeper(keeperEoa, signerEoa);
         token.transfer(address(skeeper), amount);
         deal(address(skeeper), amount);
     }
@@ -59,21 +59,21 @@ contract SkeeperTest is Test {
     }
 
     function test_WithdrawReverts_AfterKeeperRoleRevoked() public {
-        vm.startPrank(keeper_eoa);
+        vm.startPrank(keeperEoa);
 
-        // withdrawal works for keeper_eoa initially
+        // withdrawal works for keeperEoa initially
         skeeper.withdraw(address(token), 1);
         skeeper.withdraw(address(0), 1);
 
         // After revocation of KEEPER_ROLE
-        // keeper_eoa should not be able to withdraw
-        skeeper.revokeRole(KEEPER_ROLE, keeper_eoa);
+        // keeperEoa should not be able to withdraw
+        skeeper.revokeRole(KEEPER_ROLE, keeperEoa);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, keeper_eoa, KEEPER_ROLE)
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, keeperEoa, KEEPER_ROLE)
         );
         skeeper.withdraw(address(0), 1);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, keeper_eoa, KEEPER_ROLE)
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, keeperEoa, KEEPER_ROLE)
         );
         skeeper.withdraw(address(token), 1);
     }
@@ -101,8 +101,8 @@ contract SkeeperTest is Test {
         );
         skeeper.grantRole(KEEPER_ROLE, stranger_eoa);
 
-        // Grant KEEPER_ROLE to stranger_eoa from keeper_eoa
-        vm.startPrank(keeper_eoa);
+        // Grant KEEPER_ROLE to stranger_eoa from keeperEoa
+        vm.startPrank(keeperEoa);
         skeeper.grantRole(KEEPER_ROLE, stranger_eoa);
 
         // Now stranger_eoa can withdraw
@@ -114,23 +114,23 @@ contract SkeeperTest is Test {
     }
 
     function test_Erc20_WithdrawSuccess() public {
-        vm.prank(keeper_eoa);
+        vm.prank(keeperEoa);
         skeeper.withdraw(address(token), amount);
 
         // Verify balances after withdrawal
         assertEq(token.balanceOf(address(skeeper)), 0);
-        assertEq(token.balanceOf(keeper_eoa), amount);
+        assertEq(token.balanceOf(keeperEoa), amount);
     }
 
     function test_Ether_WithdrawSuccess() public {
-        vm.prank(keeper_eoa);
+        vm.prank(keeperEoa);
         skeeper.withdraw(address(0), amount);
-        assertEq(keeper_eoa.balance, amount);
+        assertEq(keeperEoa.balance, amount);
     }
 
     function test_Erc20_ApprovedSpendSuccess() public {
         address spender_eoa = makeAddr("spender_eoa");
-        vm.startPrank(keeper_eoa);
+        vm.startPrank(keeperEoa);
         assertEq(token.allowance(address(skeeper), spender_eoa), 0);
         skeeper.approve(address(token), spender_eoa, amount);
 
@@ -145,7 +145,7 @@ contract SkeeperTest is Test {
     }
 
     function test_IsValidSignatureSuccess() public {
-        vm.prank(keeper_eoa);
+        vm.prank(keeperEoa);
         skeeper.grantRole(SIGNER_ROLE, signerEoa);
         assertTrue(skeeper.hasRole(SIGNER_ROLE, signerEoa));
         assertEq(skeeper.isValidSignature(signedHash, signature), skeeper.isValidSignature.selector);
@@ -154,7 +154,7 @@ contract SkeeperTest is Test {
     function test_IsValidSignature_WhenNoSignerRole() public {
         // Revoke signer role from signerEoa
         assertTrue(skeeper.hasRole(SIGNER_ROLE, signerEoa));
-        vm.prank(keeper_eoa);
+        vm.prank(keeperEoa);
         skeeper.revokeRole(SIGNER_ROLE, signerEoa);
         assertFalse(skeeper.hasRole(SIGNER_ROLE, signerEoa));
         // isValidSignature should return 0x00 that means negative result
