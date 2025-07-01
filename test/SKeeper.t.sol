@@ -15,6 +15,7 @@ contract SkeeperTest is Test {
     address keeperEoa;
     bytes32 KEEPER_ROLE = keccak256("KEEPER_ROLE");
     bytes32 SIGNER_ROLE = keccak256("SIGNER_ROLE");
+    bytes32 DEFAULT_ADMIN_ROLE = bytes32(0);
 
     // The address of the signer EOA, which is used to sign the hash
     // derived from well-known mnemonic phrase at index 0
@@ -173,5 +174,33 @@ contract SkeeperTest is Test {
             hex"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
         vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureLength.selector, 64));
         skeeper.isValidSignature(signedHash, wrongSignature);
+    }
+
+    function test_Role_AdminCanGrantRevokeAdmins() public {
+        vm.startPrank(keeperEoa);
+        skeeper.grantRole(KEEPER_ROLE, address(123));
+        assertTrue(skeeper.hasRole(KEEPER_ROLE, address(123)));
+        skeeper.grantRole(DEFAULT_ADMIN_ROLE, address(123));
+        assertTrue(skeeper.hasRole(DEFAULT_ADMIN_ROLE, address(123)));
+        skeeper.revokeRole(KEEPER_ROLE, address(123));
+        assertFalse(skeeper.hasRole(KEEPER_ROLE, address(123)));
+        skeeper.revokeRole(DEFAULT_ADMIN_ROLE, address(123));
+        assertFalse(skeeper.hasRole(DEFAULT_ADMIN_ROLE, address(123)));
+    }
+
+    function test_Role_SignerCanNotGrantRevokeAdmins() public {
+        vm.startPrank(signerEoa);
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        skeeper.grantRole(KEEPER_ROLE, address(123));
+        assertFalse(skeeper.hasRole(KEEPER_ROLE, address(123)));
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        skeeper.grantRole(DEFAULT_ADMIN_ROLE, address(123));
+        assertFalse(skeeper.hasRole(DEFAULT_ADMIN_ROLE, address(123)));
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        skeeper.revokeRole(KEEPER_ROLE, address(123));
+        assertFalse(skeeper.hasRole(KEEPER_ROLE, address(123)));
+        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        skeeper.revokeRole(DEFAULT_ADMIN_ROLE, address(123));
+        assertFalse(skeeper.hasRole(DEFAULT_ADMIN_ROLE, address(123)));
     }
 }
