@@ -6,6 +6,7 @@ import {SKeeper} from "../src/SKeeper.sol";
 import {MockToken} from "./mock/MockToken.sol";
 import {IAccessControl} from "@openzeppelin-contracts/access/IAccessControl.sol";
 import {AccessControl} from "@openzeppelin-contracts/access/AccessControl.sol";
+import {ECDSA} from "@openzeppelin-contracts/utils/cryptography/ECDSA.sol";
 
 contract SkeeperTest is Test {
     SKeeper public skeeper;
@@ -13,11 +14,22 @@ contract SkeeperTest is Test {
     uint256 amount = 1 ether;
     address keeper_eoa;
     bytes32 KEEPER_ROLE = keccak256("KEEPER_ROLE");
+    bytes32 SIGNER_ROLE = keccak256("SIGNER_ROLE");
+
+    // The address of the signer EOA, which is used to sign the hash
+    // derived from well-known mnemonic phrase at index 0
+    // "test test test test test test test test test test test junk"
+    address signerEoa = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    // See: https://liquorice.gitbook.io/liquorice-docs/for-market-makers/basic-market-making-api
+    bytes32 signedHash = hex"2342c2e81befd9dda11c9e769d6d867e347d5b84a0137bf9fa31acbe7ee4f5ac";
+    // Signature for the signedHash, generated using the private key of signerEoa
+    bytes signature =
+        hex"1b75c9b69ce85146226ee957e1cac793ce7ea7544313909a8dd6a6afdbb348fd411480c829a6a7f73eb16bd48253f4cee567301f71890aab897aa007a5d4a5571b";
 
     function setUp() public {
         token = new MockToken(1 ether, 18);
         keeper_eoa = makeAddr("keeper_eoa");
-        skeeper = new SKeeper(keeper_eoa);
+        skeeper = new SKeeper(keeper_eoa, signerEoa);
         token.transfer(address(skeeper), amount);
         deal(address(skeeper), amount);
     }
@@ -130,5 +142,36 @@ contract SkeeperTest is Test {
         token.transferFrom(address(skeeper), spender_eoa, amount);
         assertEq(token.balanceOf(spender_eoa), amount);
         assertEq(token.balanceOf(address(skeeper)), 0);
+    }
+
+    function test_IsValidSignatureSuccess() public {
+        vm.prank(keeper_eoa);
+        skeeper.grantRole(SIGNER_ROLE, signerEoa);
+        assertTrue(skeeper.hasRole(SIGNER_ROLE, signerEoa));
+        assertEq(skeeper.isValidSignature(signedHash, signature), skeeper.isValidSignature.selector);
+    }
+
+    function test_IsValidSignature_WhenNoSignerRole() public {
+        // Revoke signer role from signerEoa
+        assertTrue(skeeper.hasRole(SIGNER_ROLE, signerEoa));
+        vm.prank(keeper_eoa);
+        skeeper.revokeRole(SIGNER_ROLE, signerEoa);
+        assertFalse(skeeper.hasRole(SIGNER_ROLE, signerEoa));
+        // isValidSignature should return 0x00 that means negative result
+        assertEq(skeeper.isValidSignature(signedHash, signature), bytes4(0));
+    }
+
+    function test_IsValidSignature_WhenWrongSingatureValue() public {
+        bytes memory wrongSignature =
+            hex"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefde";
+        vm.expectPartialRevert(ECDSA.ECDSAInvalidSignatureS.selector);
+        skeeper.isValidSignature(signedHash, wrongSignature);
+    }
+
+    function test_IsValidSignature_WhenShortSignature() public {
+        bytes memory wrongSignature =
+            hex"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureLength.selector, 64));
+        skeeper.isValidSignature(signedHash, wrongSignature);
     }
 }
